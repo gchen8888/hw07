@@ -1,0 +1,171 @@
+---
+title: "BEE 4750 Homework 7: Mixed Integer Programming"
+pdf-title: "BEE 4750/5750"
+pdf-subtitle: "Homework 7: Mixed Integer Programming"
+date: last-modified
+format:
+    html:
+        warning: true
+        error: true
+    ipynb:
+        warning: true
+        error: true
+        code-annotation: below
+    typst:
+        warning: true
+        error: true
+        toc: false
+        date: "11/04/2026"
+        filters:
+          - _assets/typst-pdf/processing.lua
+execute:
+    echo: true
+    eval: false
+engine: julia
+julia:
+  exeflags: ["+1.11.5"]
+format-links:
+  - format: typst
+    text: PDF
+    icon: file-earmark-pdf
+  - format: ipynb
+    text: Notebook
+    icon: laptop
+---
+
+::: {.content-visible when-format="ipynb"}
+**Name**:
+
+**ID**:
+:::
+
+::: {.callout-important icon=false}
+### Due Date
+
+Thursday, 11/12/26, 9:00pm
+:::
+
+::: {.content-visible when-format="html"}
+
+:::{.callout-caution}
+
+If you are enrolled in the course, use the assignment link posted on Ed Discussion so that we can find your repository if you need help.
+
+:::
+
+:::
+
+## Overview
+
+### Instructions
+
+- Problem 1 asks you to formulate a wastewater plant's choice of nitrogen upgrades with binary variables and find the best plan by hand, then solve it in `JuMP`.
+- Problem 2 asks you to solve a small integer program by hand with branch and bound.
+- Write your answers in Markdown cells. For the sketches, a photo or scan of a hand drawing is fine: save it in this folder and insert it with `![](sketch.png)`.
+
+### Load Environment
+
+```{julia}
+#| output: false
+
+import Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
+```
+
+```{julia}
+using JuMP
+using HiGHS
+using Plots
+```
+
+## Problems (Total: 50 Points)
+
+### Problem 1 (30)
+
+A city's wastewater treatment plant discharges to an estuary where nitrogen feeds algal blooms that leave the water low in oxygen each summer. Its new permit requires it to remove at least 90 tonnes of nitrogen per year (t N/yr) more than it does now. The plant already converts the ammonia in its wastewater to nitrate. Its engineers have shortlisted four upgrades:
+
+- **Anoxic zones** turn part of the aeration basins into unaerated zones, where bacteria convert nitrate to nitrogen gas (**denitrification**) using carbon already in the wastewater.
+- A **methanol feed** adds methanol to the anoxic zones, giving those bacteria extra carbon so they remove more nitrate.
+- **Sidestream treatment** is a separate reactor that treats the ammonia-rich liquid pressed out of the plant's digested sludge, before that liquid returns to the plant.
+- A **denitrification filter** is a new filter at the end of the plant, where bacteria on the filter media remove nitrate from the effluent.
+
+| Upgrade | Maximum removal (t N/yr) | Installation cost (\$1,000/yr) | Operating cost (\$/kg N removed) |
+|:--|--:|--:|--:|
+| Anoxic zones | 40 | 300 | 2 |
+| Methanol feed | 40 | 20 | 5 |
+| Sidestream treatment | 20 | 100 | 1 |
+| Denitrification filter | 80 | 250 | 3 |
+
+Installation costs are annualized: the construction cost is spread over the life of the upgrade, so the installation cost is per year, like the operating cost of a year's removal. An upgrade that is installed pays its full installation cost however much nitrogen it removes; one that is not installed costs nothing and removes nothing.
+
+Two rules limit the choice:
+
+1. The sidestream reactor and the filter would both be built on the plant's one open site, which has room for only one of them (the **site rule**).
+2. The methanol feeds the bacteria in the anoxic zones, so the methanol feed can be installed only if the anoxic zones are (the **methanol rule**).
+
+The plant wants to meet its permit at the lowest annual cost.
+
+#### Problem 1.1 (4)
+
+Define the decision variables, with units. Which are binary and which are continuous, and why does this problem need both kinds?
+
+#### Problem 1.2 (8)
+
+Write the objective function, and show that both kinds of cost in it are in \$1,000/yr. Then write the permit constraint as an inequality, and one constraint for each upgrade that links its removal to whether it is installed. What does a linking constraint say when its upgrade is not installed, and what does it say when it is?
+
+#### Problem 1.3 (5)
+
+Write the site rule and the methanol rule as one linear constraint each on your binary variables, with no new variables. For the methanol rule, list the four combinations of its two binary variables and show that your constraint allows exactly the combinations the rule allows.
+
+#### Problem 1.4 (9)
+
+Three combinations of upgrades obey both rules and can remove 90 t N/yr: the anoxic zones and the filter; the anoxic zones, the methanol feed and the filter; and the anoxic zones, the methanol feed and sidestream treatment. Once a set of upgrades is installed, its installation costs are paid whatever it removes, so the cheapest way to run it takes nitrogen from the upgrade with the lowest operating cost first, as in economic dispatch. For each combination, find the cheapest way to run it (how much each installed upgrade removes) and its annual cost. Which combination is cheapest, and why does it use the methanol feed rather than the filter?
+
+#### Problem 1.5 (4)
+
+Implement your model in `JuMP` and solve it with `HiGHS`. Report which upgrades are installed, how much each removes, and the annual cost, and confirm that they match Problem 1.4.
+
+```{julia}
+# Upgrades in the order: anoxic zones, methanol feed, sidestream, filter
+max_removal = [40, 40, 20, 80]            # [t N/yr]
+installation_cost = [300, 20, 100, 250]   # [$1,000/yr]
+operating_cost = [2, 5, 1, 3]             # [$/kg N]
+required_removal = 90                     # [t N/yr]
+
+nitrogen = Model(HiGHS.Optimizer)
+set_silent(nitrogen)
+
+# Add the variables, the objective, the permit and linking constraints,
+# and the two rules.
+```
+
+### Problem 2 (20)
+
+A water utility must add ultraviolet (UV) disinfection to its drinking-water plant, as a second barrier against *Cryptosporidium*. It can buy two kinds of UV reactor:
+
+| Reactor | Capacity (MGD) | Price (\$100,000) | Power (kW) |
+|:--|--:|--:|--:|
+| Medium-pressure | 5 | 2 | 10 |
+| Low-pressure | 2 | 1 | 2 |
+
+Medium-pressure reactors cost less per MGD of capacity, and low-pressure reactors use less power per MGD. A state grant covers \$1,000,000 of reactors, and the UV building's electrical service has 41 kW to spare. The utility wants as much UV capacity, in million gallons per day (MGD), as the grant and the power supply allow. With $x_1$ medium-pressure and $x_2$ low-pressure reactors, the problem is
+
+$$
+\begin{aligned}
+\max_{x_1, x_2} \quad & z = 5x_1 + 2x_2 && \text{(MGD)} \\
+\text{subject to:} \quad & 2x_1 + x_2 \leq 10 && \text{(grant, \$100,000)} \\
+& 10x_1 + 2x_2 \leq 41 && \text{(power, kW)} \\
+& x_1, x_2 \geq 0, \ \text{integer}.
+\end{aligned}
+$$
+
+Solve it by branch and bound, by hand.
+
+#### Problem 2.1 (7)
+
+Node 1 is the LP relaxation: the same problem without the integer requirement. Sketch its feasible region with $x_1$ on the horizontal axis, label each corner with its coordinates, and find node 1's LP optimum and its $z$. Is that $z$ an upper or a lower bound on the best capacity the utility can actually buy? Why?
+
+#### Problem 2.2 (13)
+
+Branch on $x_1$: node 2 adds $x_1 \leq 3$, and node 3 adds $x_1 \geq 4$. Solve the LP at each node (a sketch with its corners is enough), and report each solution and its $z$. Which node(s) can be pruned, and by which rule? What is the best purchase, and its capacity?
