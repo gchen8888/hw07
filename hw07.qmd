@@ -59,7 +59,7 @@ If you are enrolled in the course, use the assignment link posted on Ed Discussi
 
 ### Instructions
 
-- Problem 1 asks you to formulate a wastewater plant's choice of nitrogen upgrades with binary variables and find the best plan by hand, then solve it in `JuMP`.
+- Problem 1 asks you to formulate a wastewater plant's choice of nitrogen upgrades with binary variables, then solve it in `JuMP`.
 - Problem 2 asks you to solve a small integer program by hand with branch and bound.
 - Write your answers in Markdown cells. For the sketches, a photo or scan of a hand drawing is fine: save it in this folder and insert it with `![](sketch.png)`.
 
@@ -97,34 +97,30 @@ A city's wastewater treatment plant discharges to an estuary where nitrogen feed
 | Sidestream treatment | 20 | 100 | 1 |
 | Denitrification filter | 80 | 250 | 3 |
 
-Installation costs are annualized: the construction cost is spread over the life of the upgrade, so the installation cost is per year, like the operating cost of a year's removal. An upgrade that is installed pays its full installation cost however much nitrogen it removes; one that is not installed costs nothing and removes nothing.
+Installation costs are annualized: the construction cost is spread over the life of the upgrade, so the installation cost is per year, like the operating cost of a year's removal. An upgrade that is installed costs its full installation cost however much nitrogen it removes; one that is not installed costs nothing and removes nothing.
 
-Two rules limit the choice:
+There are two rules governing which combinations of upgrades are allowed:
 
 1. The sidestream reactor and the filter would both be built on the plant's one open site, which has room for only one of them (the **site rule**).
 2. The methanol feeds the bacteria in the anoxic zones, so the methanol feed can be installed only if the anoxic zones are (the **methanol rule**).
 
-The plant wants to meet its permit at the lowest annual cost.
+The plant wants to meet its removal requirement at the lowest annual cost.
 
 #### Problem 1.1 (4)
 
-Define the decision variables, with units. Which are binary and which are continuous, and why does this problem need both kinds?
+Define the decision variables, with units. Which are binary and which are continuous?
 
-#### Problem 1.2 (8)
+#### Problem 1.2 (10)
 
-Write the objective function, and show that both kinds of cost in it are in \$1,000/yr. Then write the permit constraint as an inequality, and one constraint for each upgrade that links its removal to whether it is installed. What does a linking constraint say when its upgrade is not installed, and what does it say when it is?
+Write the objective function. Then write the permit constraint and one constraint for each upgrade's removal capacity.
 
-#### Problem 1.3 (5)
+#### Problem 1.3 (6)
 
-Write the site rule and the methanol rule as one linear constraint each on your binary variables, with no new variables. For the methanol rule, list the four combinations of its two binary variables and show that your constraint allows exactly the combinations the rule allows.
+Write the site rule and the methanol rule as one linear constraint each.
 
-#### Problem 1.4 (9)
+#### Problem 1.4 (10)
 
-Three combinations of upgrades obey both rules and can remove 90 t N/yr: the anoxic zones and the filter; the anoxic zones, the methanol feed and the filter; and the anoxic zones, the methanol feed and sidestream treatment. Once a set of upgrades is installed, its installation costs are paid whatever it removes, so the cheapest way to run it takes nitrogen from the upgrade with the lowest operating cost first, as in economic dispatch. For each combination, find the cheapest way to run it (how much each installed upgrade removes) and its annual cost. Which combination is cheapest, and why does it use the methanol feed rather than the filter?
-
-#### Problem 1.5 (4)
-
-Implement your model in `JuMP` and solve it with `HiGHS`. Report which upgrades are installed, how much each removes, and the annual cost, and confirm that they match Problem 1.4.
+Implement your model in `JuMP` and solve it with `HiGHS`. Report which upgrades are installed, how much each removes, and the annual cost.
 
 ```{julia}
 # Upgrades in the order: anoxic zones, methanol feed, sidestream, filter

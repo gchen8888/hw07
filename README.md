@@ -11,7 +11,7 @@ If enrolled in the class, a PDF of the completed notebook, **with all cells eval
 After completing this assignment, students will be able to:
 
 * model a fixed cost, an either/or choice and a conditional decision with binary variables;
-* find the best set of on/off decisions for a small problem by hand, and check it with `JuMP`;
+* find the best set of on/off decisions for a small problem with `JuMP`;
 * explain why an LP relaxation bounds a mixed integer program;
 * trace branch and bound by hand, including when a node can be pruned.
 
